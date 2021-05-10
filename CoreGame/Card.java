@@ -1,3 +1,4 @@
+package CoreGame;
 
 public class Card {
 	int value;
