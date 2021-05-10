@@ -11,6 +11,7 @@ public class Game {
 	private List<Card> TavernDeck;
 	private List<Card> CastleDeck;
 	private List<Card> Discard;
+	private List<Card> Active;
 	private List<Card> Jokers;
 	
 	private Card foe;
@@ -22,9 +23,15 @@ public class Game {
 	private int handSize;//8 to 5 depending on players.
 	private int curPlayer;
 	
+	private boolean lossFlag;
+	
 
 	public Game() {
 		UI = new TextUI(this);
+		while(runGame()) {};//runGame returns if a new game is desired.
+	}
+	private boolean runGame() {
+		UI.Clear();
 		numPlayers = UI.GetNumPlayers();
 		curPlayer = 0;
 
@@ -51,8 +58,9 @@ public class Game {
 			CastleDeck.addAll(layer);
 		}
 		newFoe();
-		//Ready the discard pile.
+		//Ready the discard and active piles.
 		Discard = new ArrayList<Card>();
+		Active = new ArrayList<Card>();
 		
 		//Ready the hands lists.
 		Hands = new ArrayList<List<Card>>();
@@ -61,12 +69,33 @@ public class Game {
 		}
 		Deal();
 
-		//TODO - Game loop.
-		//UI.ShowState();
-		//UI.ShowHand(Hands.get(curPlayer));
-		UI.TurnCycle(Hands.get(curPlayer));
+		lossFlag = false;
+		//Primary game loop
+		while(!checkEndGameConditions()) {
+			if(numPlayers!=1) {UI.RotatePlayer(curPlayer+1);}
+			UI.TurnCycle(Hands.get(curPlayer));
+			
+			//TODO - Game loop.
+			//Take turn.
+			//Apply turn.
+			//Take damage.
+			
+			curPlayer++;
+			if(curPlayer==numPlayers) {curPlayer=0;}
+			break;//TODO - Remove once I have pauses.
+		}
+		
+		//Launch new game if desired.
+		if(numPlayers==1) {
+			return UI.SingleEndGame(!lossFlag, Jokers.size());
+		}else {
+			return UI.EndGame(!lossFlag);
+		}
 	}
 	
+	private boolean checkEndGameConditions() {//Returns true if the game is over
+		return CastleDeck.isEmpty() || lossFlag;
+	}
 	
 	
 	
@@ -104,6 +133,7 @@ public class Game {
 	public List<Card> GetTavernDeck(){return TavernDeck;}
 	public List<Card> GetCastleDeck(){return CastleDeck;}
 	public List<Card> GetDiscard(){return Discard;}
+	public List<Card> GetInPlay(){return Active;}
 	public List<List<Card>> GetHands(){return Hands;}
 	public int GetJokers(){return Jokers.size();}
 

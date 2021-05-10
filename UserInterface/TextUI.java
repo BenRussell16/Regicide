@@ -35,4 +35,41 @@ public class TextUI implements UserInterface{
 	public void Clear() {//TODO Actual purge
 		for(int i=0; i<10; i++){System.out.println();}
 	}
+
+	@Override
+	public void RotatePlayer(int player) {
+		Clear();
+		System.out.println("Ready player "+player);
+		//TODO - Pause to confirm player ready.
+	}
+
+	public List<Card> TakeTurn(List<Card> hand){//TODO - get selections
+		return hand;
+		//Remember yields and possible jokers
+	}
+	public List<Card> TakeDamage(List<Card> hand, int damage){//TODO - get selections
+		return hand;
+		//Check if possible
+	}
+
+	@Override
+	public boolean EndGame(boolean Victory) {
+		Clear();
+		if(Victory) {System.out.println("Congradulations");}
+		else {System.out.println("Defeat");}
+		return false;//TODO return true for new game.
+	}
+	@Override
+	public boolean SingleEndGame(boolean Victory, int Jokers) {
+		Clear();
+		String message = "";
+		if(Victory) {
+			if(Jokers==0) {message+="Bronze";}
+			else if(Jokers==1) {message+="Silver";}
+			else if(Jokers==2) {message+="Gold";}
+			message+="victory. Congradulations.";
+		}else {message = "Defeat.";}
+		System.out.println(message);
+		return false;//TODO return true for new game.
+	}
 }
