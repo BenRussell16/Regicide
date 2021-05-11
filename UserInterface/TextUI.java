@@ -10,17 +10,22 @@ public class TextUI implements UserInterface{
 
 	@Override
 	public int GetNumPlayers() {
+		Clear();
 		// TODO Actually ask for user input.
 		return 1;
 	}
 
 	@Override
 	public void ShowState() {
+		Clear();
 		String DeckState = "Tavern deck: "+game.GetTavernDeck().size()+"\t\tDiscard pile: "+game.GetDiscard().size();
 		if(game.GetJokers() != 0) {DeckState+="\t\tJokers: "+game.GetJokers();}
 		System.out.println(DeckState);
 		System.out.println(game.GetCastleDeck().size()+" foes remain.\t\t"
-				+"Current foe: "+game.GetFoe().toString()+" (Damage: "+game.getDamage()+", Health: "+game.getHealth()+")\n\n");
+				+"Current foe: "+game.GetFoe().toString()+" (Damage: "+game.getDamage()+", Health: "+game.getHealth()+")");
+		String ActiveCards = "";
+		for(Card c:game.GetInPlay()) {ActiveCards+="\t"+c.toString();}
+		System.out.println("Played so far:"+ActiveCards+"\n");
 	}
 
 	@Override
@@ -44,11 +49,14 @@ public class TextUI implements UserInterface{
 	}
 
 	public List<Card> TakeTurn(List<Card> hand){//TODO - get selections
+		while(hand.size()>2) {
+			hand.remove(2);
+		}
 		return hand;
 		//Remember yields and possible jokers
 	}
 	public List<Card> TakeDamage(List<Card> hand, int damage){//TODO - get selections
-		return hand;
+		return null;
 		//Check if possible
 	}
 

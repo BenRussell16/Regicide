@@ -3,6 +3,8 @@ package CoreGame;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import CoreGame.Card.Suit;
 import UserInterface.TextUI;
 import UserInterface.UserInterface;
 
@@ -31,7 +33,6 @@ public class Game {
 		while(runGame()) {};//runGame returns if a new game is desired.
 	}
 	private boolean runGame() {
-		UI.Clear();
 		numPlayers = UI.GetNumPlayers();
 		curPlayer = 0;
 
@@ -70,21 +71,97 @@ public class Game {
 		Deal();
 
 		lossFlag = false;
+		int firstYield = -1;
 		//Primary game loop
 		while(!checkEndGameConditions()) {
 			if(numPlayers!=1) {UI.RotatePlayer(curPlayer+1);}
 			UI.TurnCycle(Hands.get(curPlayer));
-			
-			//TODO - Game loop.
 			//Take turn.
+			List<Card> turn = new ArrayList<Card>();
+			turn.addAll(Hands.get(curPlayer));
+			if(numPlayers==1) {turn.addAll(Jokers);}//Let the Jokers be called in single player.
+			else if(firstYield!=curPlayer+1 && !(curPlayer==numPlayers-1 && firstYield==0)){
+				turn.add(new Card(-1, null));//Lets players return a yield if viable.
+			}
+			turn = UI.TakeTurn(turn);
 			//Apply turn.
-			//Take damage.
-			
+			if(turn.get(0).isJoker()) {//Jokers skip rest of turn and take special actions.
+				firstYield=-1;
+				if(numPlayers==1) {
+					Jokers.remove(turn.get(0));
+					while(!Hands.get(0).isEmpty()) {
+						Discard.add(Hands.get(0).remove(0));//Discard current hand.
+						Deal();//Redraw to full.
+					}
+				}else {
+					Active.add(turn.get(0));
+					Hands.get(curPlayer).remove(turn.get(0));
+					//TODO - Multiplayer Joker actions
+				}
+			}else {
+				if(turn.get(0).isYield()){//Yields get no benefit and go straight to taking damage.
+					if(firstYield==-1) {firstYield = curPlayer;}//Set the flag for first yielder.
+				}else{
+					firstYield=-1;
+					int total=0;//Normal selection.
+					boolean[] suits = new boolean[4];//TODO fill with false
+					for(Card c:turn) {
+						total+=c.getValue();
+						suits[c.getSuit().ordinal()]=true;
+						Active.add(c);
+						Hands.get(curPlayer).remove(c);
+					}
+					//Apply selection.
+					if(suits[Suit.CLUBS.ordinal()] && ActiveSuit(Suit.CLUBS)) {//Apply damage to Foe.
+						health-=total*2;
+					}else {health-=total;}
+					if(suits[Suit.DIAMONDS.ordinal()] && ActiveSuit(Suit.DIAMONDS)) {//Deal out needed cards.
+						Draw(Hands, curPlayer, total);
+					}
+					if(suits[Suit.HEARTS.ordinal()] && ActiveSuit(Suit.HEARTS)) {//Refill Tavern deck.
+						int toHeal = total;
+						if(Discard.size()<toHeal) {toHeal=Discard.size();}
+						Shuffle(Discard);
+						for(int i=0;i<toHeal;i++) {
+							TavernDeck.add(Discard.remove(0));
+						}
+					}
+					if(suits[Suit.SPADES.ordinal()] && ActiveSuit(Suit.SPADES)) {//Apply damage reduction.
+						damage-=total;
+						if(total<0) {total=0;}
+					}
+				}
+				if(health<=0) {//Foe defeated.
+					CastleDeck.remove(foe);
+					if(health==0) {
+						TavernDeck.add(0, foe);
+					}else {Discard.add(foe);}
+					if(!CastleDeck.isEmpty()) {newFoe();}
+					while(!Active.isEmpty()) {Discard.add(Active.remove(0));}//Empty the active list.
+				}else {//Take damage
+					List<Card> discarded = new ArrayList<Card>();
+					discarded.addAll(Hands.get(curPlayer));
+					if(damage==0) {//Lets them not discard if there's no damage.
+						discarded.add(new Card(-1, null) {
+							public String toString() {return "Skip";}
+						});
+					}
+					discarded = UI.TakeDamage(discarded, damage);
+					if(discarded == null) {
+						lossFlag = true;
+					}else if(!discarded.get(0).isYield()){
+						for(Card c:discarded) {
+							Discard.add(c);
+							Hands.get(curPlayer).remove(c);
+						}
+					}
+				}
+			}
+			UI.ShowState();
+			UI.ShowHand(Hands.get(curPlayer));
 			curPlayer++;
 			if(curPlayer==numPlayers) {curPlayer=0;}
-			break;//TODO - Remove once I have pauses.
 		}
-		
 		//Launch new game if desired.
 		if(numPlayers==1) {
 			return UI.SingleEndGame(!lossFlag, Jokers.size());
@@ -98,6 +175,18 @@ public class Game {
 	}
 	
 	
+	/**
+	 * Return is a given suit is being blocked by the current Foe.
+	 * @param s - The suit being checked.
+	 * @return - If the suit power can be used.
+	 */
+	private boolean ActiveSuit(Suit s) {
+		if(foe.getSuit()!=s){return true;}
+		for(Card c:Active){
+			if(c.isJoker()) {return true;}
+		}
+		return false;
+	}
 	
 	private void newFoe() {
 		foe=CastleDeck.get(0);
@@ -105,9 +194,6 @@ public class Game {
 		damage=foe.getValue();
 	}
 
-	
-	
-	
 	private void Deal() {
 		if(numPlayers==1) {handSize=8;}
 		else if(numPlayers==2) {handSize=7;}
@@ -119,6 +205,21 @@ public class Game {
 			}
 			Sort(hand);
 		}
+	}
+	private void Draw(List<List<Card>> dealTo, int current, int numCards) {
+		int fullHands=0;
+		while(numCards>0 && fullHands!=numPlayers && !TavernDeck.isEmpty()) {
+			if(dealTo.get(current).size()==handSize) {
+				fullHands++;
+			}else {
+				fullHands=0;
+				dealTo.get(current).add(TavernDeck.remove(0));
+				numCards--;
+			}
+			current++;
+			if(current==numPlayers) {current=0;}
+		}
+		for(List<Card> deals:dealTo) {Sort(deals);}//Sort the hands.
 	}
 	
 	private void Shuffle(List<Card> deck) {
