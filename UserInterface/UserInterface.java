@@ -5,16 +5,26 @@ import CoreGame.Card;
 
 public interface UserInterface {
 	public int GetNumPlayers();
-	
-	public void ShowState();
+
+	public void ShowSingleState(int Tavern, int Discard, int Jokers, int Castle, Card Foe, int Damage, int Health, List<Card> Active);
+	public void ShowMultiState(int Tavern, int Discard, int Castle, Card Foe, int Damage, int Health, List<Card> Active,
+			List<List<Card>> hands, int curPlayer);
 	public void ShowHand(List<Card> hand);
 
 	public void Clear();
 	public void RotatePlayer(int player);
-	public default void TurnCycle(List<Card> hand){
+	
+	public default void TurnCycle(int Tavern, int Discard, int Jokers, int Castle, Card Foe, int Damage, int Health, List<Card> Active,
+			List<Card> hand){
 		Clear();
-		ShowState();
+		ShowSingleState(Tavern, Discard, Jokers,Castle, Foe, Damage, Health, Active);
 		ShowHand(hand);
+	}
+	public default void TurnCycle(int Tavern, int Discard, int Castle, Card Foe, int Damage, int Health, List<Card> Active,
+			List<List<Card>> hands, int curPlayer){
+		Clear();
+		ShowMultiState(Tavern, Discard, Castle, Foe, Damage, Health, Active, hands, curPlayer);
+		ShowHand(hands.get(curPlayer));
 	}
 
 	/**

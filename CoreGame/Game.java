@@ -29,7 +29,7 @@ public class Game {
 	
 
 	public Game() {
-		UI = new TextUI(this);
+		UI = new TextUI();
 		while(runGame()) {};//runGame returns if a new game is desired.
 	}
 	private boolean runGame() {
@@ -74,8 +74,12 @@ public class Game {
 		int firstYield = -1;
 		//Primary game loop
 		while(!checkEndGameConditions()) {
-			if(numPlayers!=1) {UI.RotatePlayer(curPlayer+1);}
-			UI.TurnCycle(Hands.get(curPlayer));
+			if(numPlayers!=1) {
+				UI.RotatePlayer(curPlayer);
+				UI.TurnCycle(TavernDeck.size(), Discard.size(), CastleDeck.size(), foe, damage, health, Active, Hands, curPlayer);
+			}else {
+				UI.TurnCycle(TavernDeck.size(), Discard.size(), Jokers.size(), CastleDeck.size(), foe, damage, health, Active,Hands.get(curPlayer));
+			}
 			//Take turn.
 			List<Card> turn = new ArrayList<Card>();
 			turn.addAll(Hands.get(curPlayer));
@@ -91,8 +95,8 @@ public class Game {
 					Jokers.remove(turn.get(0));
 					while(!Hands.get(0).isEmpty()) {
 						Discard.add(Hands.get(0).remove(0));//Discard current hand.
-						Deal();//Redraw to full.
 					}
+					Deal();//Redraw to full.
 				}else {
 					Active.add(turn.get(0));
 					Hands.get(curPlayer).remove(turn.get(0));
@@ -104,7 +108,7 @@ public class Game {
 				}else{
 					firstYield=-1;
 					int total=0;//Normal selection.
-					boolean[] suits = new boolean[4];//TODO fill with false
+					boolean[] suits = {false, false, false, false};//new boolean[4] filled with false
 					for(Card c:turn) {
 						total+=c.getValue();
 						suits[c.getSuit().ordinal()]=true;
@@ -128,7 +132,7 @@ public class Game {
 					}
 					if(suits[Suit.SPADES.ordinal()] && ActiveSuit(Suit.SPADES)) {//Apply damage reduction.
 						damage-=total;
-						if(total<0) {total=0;}
+						if(damage<0) {damage=0;}
 					}
 				}
 				if(health<=0) {//Foe defeated.
@@ -143,13 +147,13 @@ public class Game {
 					discarded.addAll(Hands.get(curPlayer));
 					if(damage==0) {//Lets them not discard if there's no damage.
 						discarded.add(new Card(-1, null) {
-							public String toString() {return "Skip";}
+							public String toString() {return "Done";}
 						});
 					}
 					discarded = UI.TakeDamage(discarded, damage);
 					if(discarded == null) {
 						lossFlag = true;
-					}else if(!discarded.get(0).isYield()){
+					}else if(discarded.isEmpty() || !discarded.get(0).isYield()){
 						for(Card c:discarded) {
 							Discard.add(c);
 							Hands.get(curPlayer).remove(c);
@@ -157,10 +161,16 @@ public class Game {
 					}
 				}
 			}
-			UI.ShowState();
+			if(numPlayers==1) {
+				UI.ShowSingleState(TavernDeck.size(), Discard.size(), Jokers.size(), CastleDeck.size(), foe, damage, health, Active);
+			}else {
+				UI.ShowMultiState(TavernDeck.size(), Discard.size(), CastleDeck.size(), foe, damage, health, Active, Hands, curPlayer);
+			}
 			UI.ShowHand(Hands.get(curPlayer));
-			curPlayer++;
-			if(curPlayer==numPlayers) {curPlayer=0;}
+			if(numPlayers!=1) {
+				curPlayer++;
+				if(curPlayer==numPlayers) {curPlayer=0;}
+			}
 		}
 		//Launch new game if desired.
 		if(numPlayers==1) {
@@ -200,7 +210,7 @@ public class Game {
 		else if(numPlayers==3) {handSize=6;}
 		else if(numPlayers==4) {handSize=5;}
 		for(List<Card> hand:Hands) {
-			for(int i=0; i<handSize; i++) {
+			while(hand.size()<handSize && !TavernDeck.isEmpty()) {
 				hand.add(TavernDeck.remove(0));
 			}
 			Sort(hand);
