@@ -79,9 +79,8 @@ public class TextUI implements UserInterface{
 	@Override
 	public void RotatePlayer(int player) {
 		Clear();
-		System.out.println("Ready player "+(player+1));
-		while(!scan.hasNext()) {//TODO - Pause to confirm player ready.
-		}
+		System.out.println("Ready player "+(player+1)+" (Y)");
+		while(!scan.hasNext()) {}
 		scan.next();
 		
 	}
@@ -106,10 +105,11 @@ public class TextUI implements UserInterface{
 			if(number!=1) {sum=number;}
 			List<Card> toRemove = new ArrayList<Card>();
 			for(Card c:hand) {
-				if(c.isJoker() || c.isYield()//Remove utility
-						|| (c.getNumber()!=number && c.getNumber()!=1 && number!=1)//Remove incompatible
-						|| (number!=1 && c.getNumber()+sum>10)//Remove too high to combo
-						) {
+				if(c.getNumber()!=1 && number!=1 && (//1s can always combo.
+						c.isJoker() || c.isYield()//Remove utility
+						|| c.getNumber()!=number//Remove incompatible
+						|| c.getNumber()+sum>10//Remove too high to combo
+						)) {
 					toRemove.add(c);
 				}
 				
@@ -132,9 +132,17 @@ public class TextUI implements UserInterface{
 									finishedPlaying=true;
 								}else {
 									selection.add(selected);
-									if(selected.getNumber()!=1) {number = selected.getNumber();}
-									sum+=selected.getNumber();
 									toRemove = new ArrayList<Card>();
+									if(selected.getNumber()!=1 && number==1) {
+										number = selected.getNumber();
+										sum+=selected.getNumber();
+										for(Card c:hand) {
+											if(!c.isYield() && c.getNumber()!=1 && c.getNumber()!=number) {//Remove different numbers once chosen
+												toRemove.add(c);
+											}
+										}
+										hand.removeAll(toRemove);
+									}
 									for(Card c:hand) {
 										if(!c.isYield() && c.getNumber()!=1 && c.getNumber()+sum>10) {//Remove now invalid number cards
 											toRemove.add(c);
@@ -154,8 +162,7 @@ public class TextUI implements UserInterface{
 							//Not an int.
 							scan.next();
 						}
-					}
-					
+					}	
 				}
 			}
 		}
@@ -170,6 +177,7 @@ public class TextUI implements UserInterface{
 		total=0;
 		List<Card> selection = new ArrayList<Card>();
 		boolean finishedDiscarding=false;
+		boolean metDamage = false;
 		while(!finishedDiscarding) {
 			if(scan.hasNext()) {
 				if(scan.hasNextInt()) {
@@ -181,10 +189,11 @@ public class TextUI implements UserInterface{
 						total+=selected.getValue();
 						if(total<0) {total=0;}
 						if(chosen>=0 && chosen<=hand.size()) {selection.add(selected);}
-						if(total>=damage && total-selected.getValue()<total) {//Lets them discard extras.
+						if(total>=damage && total-selected.getValue()<total && !metDamage) {//Lets them discard extras.
 							hand.add(new Card(-1, null) {
-								public String toString() {return "Done";}//TODO - not get multiple dones
+								public String toString() {return "Done";}
 							});
+							metDamage = true;
 						}
 						int remaining = damage-total;
 						if(remaining<0) {remaining=0;}
