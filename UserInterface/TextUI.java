@@ -3,9 +3,7 @@ package UserInterface;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-
 import CoreGame.Card;
-import CoreGame.Game;
 
 public class TextUI implements UserInterface{
 	Scanner scan;
@@ -84,6 +82,34 @@ public class TextUI implements UserInterface{
 		scan.next();
 		
 	}
+	
+	@Override
+	public int ChooseNextPlayer(int curPlayer, int numPlayers) {
+		boolean[] otherPlayers=new boolean[numPlayers];
+		String options = "Who plays next?";
+		for(int i=0; i<numPlayers; i++) {
+			if(i==curPlayer) {
+				otherPlayers[i]=false;
+			}else {
+				otherPlayers[i]=true;
+				options+="\t"+(i+1);
+			}
+		}
+		System.out.println(options);
+		int selection = -1;
+		while(selection<0) {
+			if(scan.hasNext()) {
+				if(scan.hasNextInt()) {
+					int chosen = scan.nextInt();
+					if(chosen>0 && chosen<=numPlayers && otherPlayers[chosen-1]) {selection=chosen-1;}
+				}else {
+					//Not an int.
+					scan.next();
+				}
+			}
+		}
+		return selection;
+	}
 
 	public List<Card> TakeTurn(List<Card> hand){
 		printOptions(hand);
@@ -92,7 +118,7 @@ public class TextUI implements UserInterface{
 			if(scan.hasNext()) {
 				if(scan.hasNextInt()) {
 					int chosen = scan.nextInt();
-					if(chosen>=0 && chosen<=hand.size()) {selection.add(hand.remove(chosen));}
+					if(chosen>=0 && chosen<hand.size()) {selection.add(hand.remove(chosen));}
 				}else {
 					//Not an int.
 					scan.next();
@@ -105,9 +131,9 @@ public class TextUI implements UserInterface{
 			if(number!=1) {sum=number;}
 			List<Card> toRemove = new ArrayList<Card>();
 			for(Card c:hand) {
-				if(c.getNumber()!=1 && number!=1 && (//1s can always combo.
-						c.isJoker() || c.isYield()//Remove utility
-						|| c.getNumber()!=number//Remove incompatible
+				if(c.isJoker() || c.isYield()//Remove utility
+						|| c.getNumber()!=1 && number!=1//1s can always combo.
+						&& (c.getNumber()!=number//Remove incompatible
 						|| c.getNumber()+sum>10//Remove too high to combo
 						)) {
 					toRemove.add(c);
@@ -126,7 +152,7 @@ public class TextUI implements UserInterface{
 					if(scan.hasNext()) {
 						if(scan.hasNextInt()) {
 							int chosen = scan.nextInt();
-							if(chosen>=0 && chosen<=hand.size()) {
+							if(chosen>=0 && chosen<hand.size()) {
 								Card selected = hand.remove(chosen);
 								if(selected.isYield()) {
 									finishedPlaying=true;
@@ -142,6 +168,8 @@ public class TextUI implements UserInterface{
 											}
 										}
 										hand.removeAll(toRemove);
+									}else if(selected.getNumber()!=1) {
+										sum+=selected.getNumber();
 									}
 									for(Card c:hand) {
 										if(!c.isYield() && c.getNumber()!=1 && c.getNumber()+sum>10) {//Remove now invalid number cards
@@ -182,23 +210,25 @@ public class TextUI implements UserInterface{
 			if(scan.hasNext()) {
 				if(scan.hasNextInt()) {
 					int chosen = scan.nextInt();
-					Card selected = hand.remove(chosen);
-					if(selected.isYield()) {
-						finishedDiscarding=true;
-					}else {
-						total+=selected.getValue();
-						if(total<0) {total=0;}
-						if(chosen>=0 && chosen<=hand.size()) {selection.add(selected);}
-						if(total>=damage && total-selected.getValue()<total && !metDamage) {//Lets them discard extras.
-							hand.add(new Card(-1, null) {
-								public String toString() {return "Done";}
-							});
-							metDamage = true;
+					if(chosen>=0 && chosen<hand.size()) {
+						Card selected = hand.remove(chosen);
+						if(selected.isYield()) {
+							finishedDiscarding=true;
+						}else {
+							total+=selected.getValue();
+							if(total<0) {total=0;}
+							selection.add(selected);
+							if(total>=damage && total-selected.getValue()<total && !metDamage) {//Lets them discard extras.
+								hand.add(new Card(-1, null) {
+									public String toString() {return "Done";}
+								});
+								metDamage = true;
+							}
+							int remaining = damage-total;
+							if(remaining<0) {remaining=0;}
+							System.out.println("Damage: "+damage+" ("+remaining+" remaining)\tCurrently discarding: "+selection);
+							printOptions(hand);
 						}
-						int remaining = damage-total;
-						if(remaining<0) {remaining=0;}
-						System.out.println("Damage: "+damage+" ("+remaining+" remaining)\tCurrently discarding: "+selection);
-						printOptions(hand);
 					}
 				}else {
 					//Not an int.
@@ -212,9 +242,9 @@ public class TextUI implements UserInterface{
 	@Override
 	public boolean EndGame(boolean Victory) {
 		Clear();
-		if(Victory) {System.out.println("Congradulations");}
-		else {System.out.println("Defeat");}
-		return false;//TODO return true for new game.
+		if(Victory) {System.out.println("Congradulations, you achieved Regicide.");}
+		else {System.out.println("Defeat.");}
+		return newGamePrompt();
 	}
 	@Override
 	public boolean SingleEndGame(boolean Victory, int Jokers) {
@@ -227,7 +257,26 @@ public class TextUI implements UserInterface{
 			message+=" victory. Congradulations.";
 		}else {message = "Defeat.";}
 		System.out.println(message);
-		return false;//TODO return true for new game.
+		return newGamePrompt();
+	}
+	
+	private boolean newGamePrompt() {
+		System.out.println("Would you like to play again? (Y/N)");
+		boolean newGame = false;
+		boolean decided = false;
+		while(!decided) {
+			if(scan.hasNext()) {
+				String response = scan.next();
+				if(response.toLowerCase().startsWith("y")) {//TODO widen accepted arguments.
+					decided=true;
+					newGame=true;
+				}else if(response.toLowerCase().startsWith("n")) {
+					decided=true;
+					newGame=false;
+				}
+			}
+		}
+		return newGame;
 	}
 	
 	private void printOptions(List<Card> hand) {

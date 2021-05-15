@@ -18,14 +18,16 @@ public interface UserInterface {
 			List<Card> hand){
 		Clear();
 		ShowSingleState(Tavern, Discard, Jokers,Castle, Foe, Damage, Health, Active);
-		ShowHand(hand);
+		//ShowHand(hand);
 	}
 	public default void TurnCycle(int Tavern, int Discard, int Castle, Card Foe, int Damage, int Health, List<Card> Active,
 			List<List<Card>> hands, int curPlayer){
 		Clear();
 		ShowMultiState(Tavern, Discard, Castle, Foe, Damage, Health, Active, hands, curPlayer);
-		ShowHand(hands.get(curPlayer));
+		//ShowHand(hands.get(curPlayer));
 	}
+	
+	public int ChooseNextPlayer(int curPlayer, int numPlayers);
 
 	/**
 	 * A method to prompt the player to take their turn.

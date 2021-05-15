@@ -87,6 +87,10 @@ public class Game {
 			else if(firstYield!=curPlayer+1 && !(curPlayer==numPlayers-1 && firstYield==0)){
 				turn.add(new Card(-1, null));//Lets players return a yield if viable.
 			}
+			if(turn.isEmpty()) {//If no actions can be taken then lose.
+				lossFlag=true;
+				break;
+			}
 			turn = UI.TakeTurn(turn);
 			//Apply turn.
 			if(turn.get(0).isJoker()) {//Jokers skip rest of turn and take special actions.
@@ -100,7 +104,10 @@ public class Game {
 				}else {
 					Active.add(turn.get(0));
 					Hands.get(curPlayer).remove(turn.get(0));
-					//TODO - Multiplayer Joker actions
+					if(numPlayers>=3) {
+						curPlayer=UI.ChooseNextPlayer(curPlayer, numPlayers)-1;
+						if(curPlayer==-1) {curPlayer=numPlayers-1;}
+					}
 				}
 			}else {
 				if(turn.get(0).isYield()){//Yields get no benefit and go straight to taking damage.
@@ -140,7 +147,11 @@ public class Game {
 					if(health==0) {
 						TavernDeck.add(0, foe);
 					}else {Discard.add(foe);}
-					if(!CastleDeck.isEmpty()) {newFoe();}
+					if(!CastleDeck.isEmpty()) {
+						newFoe();
+						curPlayer--;//Defeating a foe doesn't increment the turn rotation.
+						if(curPlayer==-1) {curPlayer=numPlayers-1;}
+					}
 					while(!Active.isEmpty()) {Discard.add(Active.remove(0));}//Empty the active list.
 				}else {//Take damage
 					List<Card> discarded = new ArrayList<Card>();
@@ -161,12 +172,6 @@ public class Game {
 					}
 				}
 			}
-			if(numPlayers==1) {
-				UI.ShowSingleState(TavernDeck.size(), Discard.size(), Jokers.size(), CastleDeck.size(), foe, damage, health, Active);
-			}else {
-				UI.ShowMultiState(TavernDeck.size(), Discard.size(), CastleDeck.size(), foe, damage, health, Active, Hands, curPlayer);
-			}
-			UI.ShowHand(Hands.get(curPlayer));
 			if(numPlayers!=1) {
 				curPlayer++;
 				if(curPlayer==numPlayers) {curPlayer=0;}
